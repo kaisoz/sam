@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>SAM Documentation on SAM</title><link>https://sam-mesh.dev/docs/</link><description>Recent content in SAM Documentation on SAM</description><generator>Hugo</generator><language>en-us</language><atom:link href="https://sam-mesh.dev/docs/index.xml" rel="self" type="application/rss+xml"/><item><title>Quick Start</title><link>https://sam-mesh.dev/docs/quickstart/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://sam-mesh.dev/docs/quickstart/</guid><description>&lt;h1 id="quick-start">Quick Start&lt;/h1>
+&lt;p>This guide gets you up and running with a SAM node connected to the public &lt;code>bananas.sam-mesh.dev&lt;/code> mesh. You can run SAM either directly via a binary or using Docker.&lt;/p>
+&lt;h2 id="1-install-sam">1. Install SAM&lt;/h2>
+&lt;h3 id="option-a-install-script-macos--linux">Option A: Install Script (macOS / Linux)&lt;/h3>
+&lt;p>The easiest way to install the latest binaries directly:&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">curl -sL https://sam-mesh.dev/install.sh &lt;span class="p">|&lt;/span> bash
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="option-b-go-install-macos--linux--windows">Option B: Go Install (macOS / Linux / Windows)&lt;/h3>
+&lt;p>If you have Go installed, you can compile and install directly from the repository:&lt;/p></description></item></channel></rss>
