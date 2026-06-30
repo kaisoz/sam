@@ -54,7 +54,15 @@ class SamClient:
             return resp.model_dump() if hasattr(resp, "model_dump") else resp
 
     async def __aenter__(self):
-        await self.connect()
+        for attempt in range(1, 13):
+            try:
+                await self.connect()
+                return self
+            except Exception as e:
+                if attempt == 12:
+                    raise
+                print(f"[-] Failed to connect to SAM node (attempt {attempt}/12): {e}. Retrying in 5 seconds...")
+                await asyncio.sleep(5.0)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -145,7 +153,7 @@ class FallbackAgent:
             return await self.step_gemini(prompt, mcp_tools)
 
     async def step_mesh(self, peer_id: str, prompt: str, mcp_tools: list) -> dict:
-        url = f"{self.base_url}/sam/{peer_id}/inference/vllm-tpu/chat/completions"
+        url = f"{self.base_url}/sam/{peer_id}/inference/vllm-tpu/v1/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json"
