@@ -26,6 +26,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -682,5 +683,41 @@ func TestRouterGossipSubBannedEvent(t *testing.T) {
 
 	if _, banned := r.bannedPeers.Load(bannedPeerID); !banned {
 		t.Errorf("expected peer %s to be stored in bannedPeers blocklist upon receiving MeshEvent_BANNED", bannedPeerIDStr)
+	}
+}
+
+func TestRouterRefreshOIDCTokenRereadsRotatedFile(t *testing.T) {
+	jwtPath := filepath.Join(t.TempDir(), "sam-token")
+	if err := os.WriteFile(jwtPath, []byte("token-at-startup\n"), 0o600); err != nil {
+		t.Fatalf("write token: %v", err)
+	}
+
+	r := &Router{config: Options{JWTPath: jwtPath}}
+	if err := r.refreshOIDCToken(); err != nil {
+		t.Fatalf("refreshOIDCToken: %v", err)
+	}
+	if r.config.OIDCToken != "token-at-startup" {
+		t.Fatalf("OIDCToken = %q, want %q", r.config.OIDCToken, "token-at-startup")
+	}
+
+	// The kubelet rotates the projected token in place; re-enrollment must see the new value.
+	if err := os.WriteFile(jwtPath, []byte("token-after-rotation\n"), 0o600); err != nil {
+		t.Fatalf("rotate token: %v", err)
+	}
+	if err := r.refreshOIDCToken(); err != nil {
+		t.Fatalf("refreshOIDCToken after rotation: %v", err)
+	}
+	if r.config.OIDCToken != "token-after-rotation" {
+		t.Fatalf("OIDCToken = %q, want %q", r.config.OIDCToken, "token-after-rotation")
+	}
+}
+
+func TestRouterRefreshOIDCTokenNoPath(t *testing.T) {
+	r := &Router{config: Options{OIDCToken: "static-token"}}
+	if err := r.refreshOIDCToken(); err != nil {
+		t.Fatalf("refreshOIDCToken with no JWTPath: %v", err)
+	}
+	if r.config.OIDCToken != "static-token" {
+		t.Fatalf("OIDCToken = %q, want it untouched", r.config.OIDCToken)
 	}
 }

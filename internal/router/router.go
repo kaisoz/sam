@@ -471,6 +471,19 @@ func (r *Router) enrollBootstrap(peerID peer.ID) error {
 	return nil
 }
 
+// refreshOIDCToken re-reads the JWT from disk.
+func (r *Router) refreshOIDCToken() error {
+	if r.config.JWTPath == "" {
+		return nil
+	}
+	tokenData, err := os.ReadFile(r.config.JWTPath)
+	if err != nil {
+		return fmt.Errorf("failed to re-read JWT from path %s: %w", r.config.JWTPath, err)
+	}
+	r.config.OIDCToken = strings.TrimSpace(string(tokenData))
+	return nil
+}
+
 func (r *Router) reEnroll() error {
 	r.enrollMu.Lock()
 	defer r.enrollMu.Unlock()
@@ -481,7 +494,11 @@ func (r *Router) reEnroll() error {
 
 	if r.config.BootstrapToken != "" {
 		return r.enrollBootstrap(r.Host.ID())
-	} else if r.config.OIDCToken != "" {
+	}
+	if err := r.refreshOIDCToken(); err != nil {
+		return err
+	}
+	if r.config.OIDCToken != "" {
 		return r.enroll(r.Host.ID())
 	}
 	return fmt.Errorf("no enrollment token available for re-enrollment")
