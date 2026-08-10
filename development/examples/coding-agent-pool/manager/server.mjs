@@ -14,6 +14,7 @@ const DISCOVERY_MS = Number(process.env.SAM_DISCOVERY_MS ?? 3000);
 const LEASE_MS = Number(process.env.SAM_LEASE_MS ?? 60000);
 const GRACE_MISSES = Number(process.env.SAM_GRACE_MISSES ?? 2);
 const POOL_SECRET = process.env.SAM_POOL_SECRET ?? "sam-dev-pool-secret"; // shared dev secret; enforcement always on
+const NODE_TIMEOUT_MS = Number(process.env.SAM_NODE_TIMEOUT_MS ?? 5000);
 const ACQUIRE_POLL_MS = 200;
 
 // roster: peer_id -> { tool, leasedUntil, leaseId, missCount }.
@@ -23,15 +24,52 @@ const now = () => Date.now();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let leaseSeq = 0;
 
-// Northbound MCP client to the local node for DHT discovery.
-const node = new Client({ name: "pool-manager", version: "1.0.0" });
+// Northbound MCP client to the local node for DHT discovery. Null until connected.
+let node = null;
+let discovering = false;
+
+// Bound an await that has no timeout of its own.
+function withTimeout(promise, ms, label) {
+  let timer;
+  const expiry = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+  });
+  return Promise.race([promise, expiry]).finally(() => clearTimeout(timer));
+}
+
+// (Re)connect to the local node. The node may not be serving yet, or may restart
+// under us; a bounded, retried attempt keeps that from wedging discovery forever.
+async function ensureConnected() {
+  if (node) return true;
+  const client = new Client({ name: "pool-manager", version: "1.0.0" });
+  const transport = new StreamableHTTPClientTransport(new URL(NODE_URL), {
+    requestInit: { headers: { "X-Sam-Authentication": `Bearer ${API_TOKEN}` } },
+  });
+  try {
+    await withTimeout(client.connect(transport), NODE_TIMEOUT_MS, `connect ${NODE_URL}`);
+    node = client;
+    console.log(`connected to node ${NODE_URL}`);
+    return true;
+  } catch (err) {
+    console.error(`connect failed: ${err?.message ?? err}`);
+    try { await client.close(); } catch { /* already dead */ }
+    return false;
+  }
+}
 
 // Refresh the roster from DHT discovery. Preserve lease state for known peers;
 // never evict a leased (busy) worker on a transient miss, and only drop a free
 // worker after it has been missing for GRACE_MISSES consecutive passes.
 async function discover() {
+  if (discovering) return; // a slow pass must not race a reconnect
+  discovering = true;
   try {
-    const res = await node.callTool({ name: "find_remote_tools", arguments: {} });
+    if (!(await ensureConnected())) return;
+    const res = await withTimeout(
+      node.callTool({ name: "find_remote_tools", arguments: {} }),
+      NODE_TIMEOUT_MS,
+      "find_remote_tools",
+    );
     const rows = JSON.parse(res.content[0].text); // [{peer_id, tool_name, ...}]
     const prefix = `mcp://${POOL_SERVICE}/`; // tool names are full URIs, e.g. mcp://code-reviewer/review_code
     const seen = new Set();
@@ -49,8 +87,13 @@ async function discover() {
       entry.missCount++;
       if (entry.missCount >= GRACE_MISSES) roster.delete(peer);
     }
+    // An empty roster next to a non-empty catalogue means the filter, not the mesh.
+    if (rows.length && !roster.size) console.error(`discovery: ${rows.length} rows, none matched '${prefix}'`);
   } catch (err) {
     console.error(`discovery failed: ${err?.message ?? err}`);
+    node = null; // drop the session so the next pass reconnects
+  } finally {
+    discovering = false;
   }
 }
 
@@ -135,12 +178,10 @@ app.post("/mcp", async (req, res) => {
   await transport.handleRequest(req, res, req.body);
 });
 
-app.listen(PORT, "0.0.0.0", async () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`pool-manager MCP server on :${PORT}/mcp (pooling '${POOL_SERVICE}')`);
-  const transport = new StreamableHTTPClientTransport(new URL(NODE_URL), {
-    requestInit: { headers: { "X-Sam-Authentication": `Bearer ${API_TOKEN}` } },
-  });
-  await node.connect(transport);
-  await discover();
+  // Not awaited: connecting happens inside the discovery loop so a node that is
+  // slow or restarting delays discovery instead of wedging it.
+  discover();
   setInterval(discover, DISCOVERY_MS);
 });
