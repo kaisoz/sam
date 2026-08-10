@@ -27,6 +27,7 @@ let leaseSeq = 0;
 // Northbound MCP client to the local node for DHT discovery. Null until connected.
 let node = null;
 let discovering = false;
+let lastSize = -1;
 
 // Bound an await that has no timeout of its own.
 function withTimeout(promise, ms, label) {
@@ -87,8 +88,11 @@ async function discover() {
       entry.missCount++;
       if (entry.missCount >= GRACE_MISSES) roster.delete(peer);
     }
-    // An empty roster next to a non-empty catalogue means the filter, not the mesh.
-    if (rows.length && !roster.size) console.error(`discovery: ${rows.length} rows, none matched '${prefix}'`);
+    // Zero workers must always say why: no rows at all points at the mesh or at
+    // this node's view of it; rows that matched nothing points at the filter.
+    if (!roster.size) console.error(`discovery: ${rows.length} rows from ${NODE_URL}, none matched '${prefix}'`);
+    else if (roster.size !== lastSize) console.log(`discovery: ${roster.size} worker(s) in the '${POOL_SERVICE}' pool`);
+    lastSize = roster.size;
   } catch (err) {
     console.error(`discovery failed: ${err?.message ?? err}`);
     node = null; // drop the session so the next pass reconnects

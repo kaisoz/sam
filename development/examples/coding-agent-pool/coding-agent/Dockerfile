@@ -20,7 +20,7 @@ RUN cd /work && npm install --no-audit --no-fund \
 
 # Dev-only: replace <API_KEY> with a Google AI Studio free-tier key before `make kind`.
 # Keep the edit local so it is never committed:
-#   git update-index --skip-worktree development/examples/coding-agent-pool/worker/Dockerfile
+#   git update-index --skip-worktree development/examples/coding-agent-pool/coding-agent/Dockerfile
 ENV GEMINI_API_KEY=<API_KEY>
 ENV GEMINI_CLI_TRUST_WORKSPACE=true
 ENV SAM_WORKSPACE=/work
