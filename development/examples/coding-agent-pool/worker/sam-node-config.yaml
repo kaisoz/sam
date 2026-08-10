@@ -1,0 +1,8 @@
+version: "v1alpha1"
+attenuation:
+  policies: []
+services:
+  - type: "mcp"
+    name: "coding-agent"
+    description: "Fixes a single-file bug in its warm workspace via a Gemini-backed coding agent"
+    target_url: "http://127.0.0.1:7781/mcp"

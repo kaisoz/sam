@@ -5,7 +5,7 @@
 #   node-c: code-reviewer-pool/reviewer
 # All nodes ship bare by default — assign services to suit what you're testing.
 node-a:
-node-b:
-node-c:
-node-d:
-node-e:
+node-b: coding-agent-pool/worker
+node-c: coding-agent-pool/worker
+node-d: coding-agent-pool/worker
+node-e: coding-agent-pool/manager
