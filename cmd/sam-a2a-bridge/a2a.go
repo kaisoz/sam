@@ -85,30 +85,28 @@ func handleGetAgentCard(ctx context.Context, cfg bridgeConfig, p getAgentCardPar
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	// Wire keys match a2a-go v2.5.0's a2a.AgentCard/AgentCapabilities/AgentSkill json tags exactly.
-	var wire struct {
-		Name               string   `json:"name"`
-		Description        string   `json:"description"`
-		Version            string   `json:"version"`
-		DefaultInputModes  []string `json:"defaultInputModes"`
-		DefaultOutputModes []string `json:"defaultOutputModes"`
-		Capabilities       struct {
-			Streaming bool `json:"streaming"`
-		} `json:"capabilities"`
-		Skills []agentCardSkill `json:"skills"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&wire); err != nil {
+	var card a2a.AgentCard
+	if err := json.NewDecoder(resp.Body).Decode(&card); err != nil {
 		return agentCardSummary{}, fmt.Errorf("agent card is not valid JSON: %w", err)
 	}
-	return agentCardSummary{
-		Name:               wire.Name,
-		Description:        wire.Description,
-		Version:            wire.Version,
-		DefaultInputModes:  wire.DefaultInputModes,
-		DefaultOutputModes: wire.DefaultOutputModes,
-		Streaming:          wire.Capabilities.Streaming,
-		Skills:             wire.Skills,
-	}, nil
+	summary := agentCardSummary{
+		Name:               card.Name,
+		Description:        card.Description,
+		Version:            card.Version,
+		DefaultInputModes:  card.DefaultInputModes,
+		DefaultOutputModes: card.DefaultOutputModes,
+		Streaming:          card.Capabilities.Streaming,
+	}
+	for _, skill := range card.Skills {
+		summary.Skills = append(summary.Skills, agentCardSkill{
+			ID:          skill.ID,
+			Name:        skill.Name,
+			Description: skill.Description,
+			Tags:        skill.Tags,
+			Examples:    skill.Examples,
+		})
+	}
+	return summary, nil
 }
 
 type sendAgentTaskParams struct {

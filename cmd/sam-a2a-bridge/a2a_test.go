@@ -318,7 +318,8 @@ func TestGetAgentCardTrims(t *testing.T) {
 	card := `{"name":"echo-agent","description":"echoes","version":"1.2.0",` +
 		`"defaultInputModes":["text/plain","application/pdf"],"defaultOutputModes":["text/plain"],` +
 		`"capabilities":{"streaming":false,"pushNotifications":true},` +
-		`"securitySchemes":{"oauth":{"type":"oauth2"}},"provider":{"organization":"acme"},` +
+		`"securitySchemes":{"corp":{"apiKeySecurityScheme":{"location":"cookie","name":"session"}}},` +
+		`"provider":{"organization":"acme"},` +
 		`"skills":[{"id":"echo","name":"Echo","description":"repeats input",` +
 		`"tags":["test"],"examples":["say hi"]}]}`
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -349,7 +350,7 @@ func TestGetAgentCardTrims(t *testing.T) {
 		t.Error("streaming must reflect the card (false)")
 	}
 	raw, _ := json.Marshal(got)
-	if strings.Contains(string(raw), "oauth") || strings.Contains(string(raw), "acme") {
+	if strings.Contains(string(raw), "session") || strings.Contains(string(raw), "acme") {
 		t.Fatalf("trim failed, security/provider material leaked: %s", raw)
 	}
 }
