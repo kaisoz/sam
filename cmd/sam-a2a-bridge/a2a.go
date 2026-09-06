@@ -67,6 +67,8 @@ type agentCardSkill struct {
 	Description string   `json:"description,omitempty"`
 	Tags        []string `json:"tags,omitempty"`
 	Examples    []string `json:"examples,omitempty"`
+	InputModes  []string `json:"input_modes,omitempty"`
+	OutputModes []string `json:"output_modes,omitempty"`
 }
 
 func handleGetAgentCard(ctx context.Context, cfg bridgeConfig, p getAgentCardParams) (agentCardSummary, error) {
@@ -104,6 +106,8 @@ func handleGetAgentCard(ctx context.Context, cfg bridgeConfig, p getAgentCardPar
 			Description: skill.Description,
 			Tags:        skill.Tags,
 			Examples:    skill.Examples,
+			InputModes:  skill.InputModes,
+			OutputModes: skill.OutputModes,
 		})
 	}
 	return summary, nil

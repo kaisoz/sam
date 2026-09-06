@@ -321,7 +321,7 @@ func TestGetAgentCardTrims(t *testing.T) {
 		`"securitySchemes":{"corp":{"apiKeySecurityScheme":{"location":"cookie","name":"session"}}},` +
 		`"provider":{"organization":"acme"},` +
 		`"skills":[{"id":"echo","name":"Echo","description":"repeats input",` +
-		`"tags":["test"],"examples":["say hi"]}]}`
+		`"tags":["test"],"examples":["say hi"],"inputModes":["audio/mpeg"],"outputModes":["text/plain"]}]}`
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet || !strings.HasSuffix(r.URL.Path, "/.well-known/agent-card.json") {
 			http.Error(w, "not found", http.StatusNotFound)
@@ -340,7 +340,8 @@ func TestGetAgentCardTrims(t *testing.T) {
 	if got.Name != "echo-agent" || got.Version != "1.2.0" {
 		t.Errorf("identity fields: %+v", got)
 	}
-	if len(got.Skills) != 1 || got.Skills[0].ID != "echo" || got.Skills[0].Examples[0] != "say hi" {
+	if len(got.Skills) != 1 || got.Skills[0].ID != "echo" || got.Skills[0].Examples[0] != "say hi" ||
+		len(got.Skills[0].InputModes) != 1 || got.Skills[0].InputModes[0] != "audio/mpeg" {
 		t.Errorf("skills not carried: %+v", got.Skills)
 	}
 	if len(got.DefaultInputModes) != 2 {
